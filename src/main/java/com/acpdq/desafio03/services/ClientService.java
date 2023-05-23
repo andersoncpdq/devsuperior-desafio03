@@ -1,0 +1,67 @@
+package com.acpdq.desafio03.services;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import com.acpdq.desafio03.dto.ClientDTO;
+import com.acpdq.desafio03.entities.Client;
+import com.acpdq.desafio03.repositories.ClientRepository;
+import com.acpdq.desafio03.services.exceptions.ResourceNotFoundException;
+
+import jakarta.persistence.EntityNotFoundException;
+
+@Service
+public class ClientService {
+	
+	@Autowired
+	private ClientRepository repository;
+	
+	@Transactional(readOnly = true)
+	public ClientDTO findById(Long id) {
+		return new ClientDTO( repository.findById(id)
+					.orElseThrow( () -> new ResourceNotFoundException("Recurso não encontrado") ) );
+	}
+	
+	@Transactional(readOnly = true)
+	public Page<ClientDTO> findAll(Pageable pageable){
+		Page<Client> result = repository.findAll(pageable);
+		return result.map(x -> new ClientDTO(x));
+	}
+	
+	@Transactional
+	public ClientDTO insert(ClientDTO dto) {
+		Client client = new Client();
+		copyDtoToEntity(dto, client);
+		return new ClientDTO( repository.save(client) );
+	}
+	
+	@Transactional
+	public ClientDTO update(Long id, ClientDTO dto) {
+		try {
+			Client client = repository.getReferenceById(id);
+			copyDtoToEntity(dto, client);
+			return new ClientDTO( repository.save(client) );
+		} catch (EntityNotFoundException e) {
+			throw new ResourceNotFoundException("Recurso não encontrado");
+		}
+	}
+	
+	@Transactional
+	public void delete(Long id) {
+		if ( !repository.existsById(id) )
+			throw new ResourceNotFoundException("Recurso não encontrado");
+
+		repository.deleteById(id);
+	}
+
+	private void copyDtoToEntity(ClientDTO dto, Client entity) {
+		entity.setName(dto.getName());
+		entity.setCpf(dto.getCpf());
+		entity.setIncome(dto.getIncome());
+		entity.setBirthDate(dto.getBirthDate());
+		entity.setChildren(dto.getChildren());
+	}
+}
